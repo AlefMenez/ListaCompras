@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "277868546108",
+    "project_id": "projeto-alura-9692e",
+    "storage_bucket": "projeto-alura-9692e.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:277868546108:android:3350103ce1223f63fbdb39",
+        "android_client_info": {
+          "package_name": "com.example.firebase_project"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "277868546108-8nu5u7a8dhi3p1hapn9409khsdn3f4tg.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBztK-yigePdVChIEfT0IOMWMqTzjmSe8c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "277868546108-8nu5u7a8dhi3p1hapn9409khsdn3f4tg.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "277868546108-0u2bt0a3mtdqalbih89lbpnr49ierpbn.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.firebaseProject"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
