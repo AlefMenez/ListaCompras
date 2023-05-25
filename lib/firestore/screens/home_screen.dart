@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_project/firestore_produtos/presentation/produto_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/listin.dart';
@@ -65,13 +66,17 @@ class _HomeScreenState extends State<HomeScreen> {
                         remove(model);
                       },
                       child: ListTile(
-                        onTap: () {},
+                        onTap: () {
+                          Navigator.push(
+                            context, MaterialPageRoute(builder: (context) => ProdutoScreen(listin: model),)
+                          );
+                        },
                         onLongPress: () {
                           showFormModal(model: model);
                         },
                         leading: const Icon(Icons.list_alt_rounded),
                         title: Text(model.name),
-                        subtitle: Text(model.id),
+                        //subtitle: Text(model.id),
                       ),
                     );
                   },
@@ -182,7 +187,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void remove(Listin model) {
-    firestore.collection('listaCompras').doc(model.id).delete();
+    firestore.collection('ListaCompras').doc(model.id).delete();
     refresh();
   }
 }

@@ -1,3 +1,7 @@
+import 'dart:async';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_project/firestore_produtos/helpers/enum_order.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../../firestore/models/listin.dart';
@@ -13,85 +17,142 @@ class ProdutoScreen extends StatefulWidget {
 }
 
 class _ProdutoScreenState extends State<ProdutoScreen> {
-  List<Produto> listaProdutosPlanejados = [
-    Produto(id: "ADASD", name: "Maçã", isComprado: false),
-    Produto(id: "UUID", name: "Pêra", isComprado: false),
-  ];
+  List<Produto> listaProdutosPlanejados = [];
+  List<Produto> listaProdutosPegos = [];
 
-  List<Produto> listaProdutosPegos = [
-    Produto(id: "UUID", name: "Laranja", amount: 5, price: 1, isComprado: true),
-  ];
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+  OrdemProduto ordem = OrdemProduto.name;
+  bool isDecrescente = false;
+
+  late StreamSubscription listener;
+
+  @override
+  void initState() {
+    setupListeners();
+    super.initState();
+  }
+
+  @override
+  void dispose() {
+    listener.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(widget.listin.name)),
+      appBar: AppBar(
+        title: Text(widget.listin.name),
+        actions: [
+          PopupMenuButton(
+            itemBuilder: (context) {
+              return [
+                const PopupMenuItem(
+                  child: Text('Ordernar por nome'),
+                  value: OrdemProduto.name,
+                ),
+                const PopupMenuItem(
+                  child: Text('Ordernar por quantidade'),
+                  value: OrdemProduto.amount,
+                ),
+                const PopupMenuItem(
+                  child: Text('Ordernar por peço'),
+                  value: OrdemProduto.price,
+                ),
+              ];
+            },
+            onSelected: (value) {
+              setState(() {
+                if (ordem == value) {
+                  isDecrescente = !isDecrescente;
+                } else {
+                  ordem = value;
+                  isDecrescente = false;
+                }
+              });
+              refresh();
+            },
+          )
+        ],
+      ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           showFormModal();
         },
         child: const Icon(Icons.add),
       ),
-      body: ListView(
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16.0),
-            child: Column(
-              children: const [
-                Text(
-                  "R\$${0}",
-                  style: TextStyle(fontSize: 42),
-                ),
-                Text(
-                  "total previsto para essa compra",
-                  style: TextStyle(fontStyle: FontStyle.italic),
-                ),
-              ],
+      body: RefreshIndicator(
+        onRefresh: () {
+          return refresh();
+        },
+        child: ListView(
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Column(
+                children:  [
+                  Text(
+                    "R\$${calcularPrecoPegos().toStringAsFixed(2)}",
+                    style: const TextStyle(fontSize: 42),
+                  ),
+                  const Text(
+                    "total previsto para essa compra",
+                    style: TextStyle(fontStyle: FontStyle.italic),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Divider(thickness: 2),
-          ),
-          const Text(
-            "Produtos Planejados",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Divider(thickness: 2),
             ),
-          ),
-          Column(
-            children: List.generate(listaProdutosPlanejados.length, (index) {
-              Produto produto = listaProdutosPlanejados[index];
-              return ListTileProduto(
-                produto: produto,
-                isComprado: false,
-              );
-            }),
-          ),
-          const Padding(
-            padding: EdgeInsets.all(8.0),
-            child: Divider(thickness: 2),
-          ),
-          const Text(
-            "Produtos Comprados",
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
+            const Text(
+              "Produtos Planejados",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-          Column(
-            children: List.generate(listaProdutosPegos.length, (index) {
-              Produto produto = listaProdutosPegos[index];
-              return ListTileProduto(
-                produto: produto,
-                isComprado: true,
-              );
-            }),
-          ),
-        ],
+            Column(
+              children: List.generate(listaProdutosPlanejados.length, (index) {
+                Produto produto = listaProdutosPlanejados[index];
+                return ListTileProduto(
+                  produto: produto,
+                  isComprado: false,
+                  showModal: showFormModal,
+                  iconClick: alternarComprado,
+                  trailClick: removerProduto,
+                );
+              }),
+            ),
+            const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Divider(thickness: 2),
+            ),
+            const Text(
+              "Produtos Comprados",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            Column(
+              children: List.generate(listaProdutosPegos.length, (index) {
+                Produto produto = listaProdutosPegos[index];
+                return ListTileProduto(
+                  produto: produto,
+                  isComprado: true,
+                  showModal: showFormModal,
+                  iconClick: alternarComprado,
+                  trailClick: removerProduto,
+                );
+              }),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -143,7 +204,8 @@ class _ProdutoScreenState extends State<ProdutoScreen> {
           // Formulário com Título, Campo e Botões
           child: ListView(
             children: [
-              Text(labelTitle, style: Theme.of(context).textTheme.headline5),
+              Text(labelTitle,
+                  style: Theme.of(context).textTheme.headlineSmall),
               TextFormField(
                 controller: nameController,
                 keyboardType: TextInputType.name,
@@ -218,10 +280,14 @@ class _ProdutoScreenState extends State<ProdutoScreen> {
                         produto.price = double.parse(priceController.text);
                       }
 
-                      // TODO: Salvar no Firestore
-
+                      // Salvar no Firestore
+                      firestore
+                          .collection("ListaCompras")
+                          .doc(widget.listin.id)
+                          .collection("produtos")
+                          .doc(produto.id)
+                          .set(produto.toMap());
                       // Atualizar a lista
-                      refresh();
 
                       // Fechar o Modal
                       Navigator.pop(context);
@@ -237,5 +303,115 @@ class _ProdutoScreenState extends State<ProdutoScreen> {
     );
   }
 
-  refresh() {}
+  refresh({QuerySnapshot<Map<String, dynamic>>? snapshot}) async {
+    List<Produto> temp = [];
+
+    snapshot ??= await firestore
+        .collection("ListaCompras")
+        .doc(widget.listin.id)
+        .collection("produtos")
+        //.where("isComprado", isEqualTo: isComprado)
+        .orderBy(ordem.name, descending: isDecrescente)
+        .get();
+
+    verificarAlteracoes(snapshot);
+
+    for (var doc in snapshot.docs) {
+      Produto produto = Produto.fromMap(doc.data());
+      temp.add(produto);
+    }
+    filtrarProdutos(temp);
+  }
+
+  filtrarProdutos(List<Produto> ListaProdutos) {
+    List<Produto> tempPlanejados = [];
+    List<Produto> tempPegos = [];
+
+    for (var produto in ListaProdutos) {
+      if (produto.isComprado) {
+        tempPegos.add(produto);
+      } else {
+        tempPlanejados.add(produto);
+      }
+    }
+
+    setState(() {
+      listaProdutosPegos = tempPegos;
+      listaProdutosPlanejados = tempPlanejados;
+    });
+  }
+
+  alternarComprado(Produto produto) async {
+    produto.isComprado = !produto.isComprado;
+
+    await firestore
+        .collection("ListaCompras")
+        .doc(widget.listin.id)
+        .collection("produtos")
+        .doc(produto.id)
+        .update({"isComprado": produto.isComprado});
+  }
+
+  setupListeners() {
+    listener = firestore
+        .collection("ListaCompras")
+        .doc(widget.listin.id)
+        .collection("produtos")
+        .orderBy(ordem.name, descending: isDecrescente)
+        .snapshots()
+        .listen((snapshot) {
+      refresh(snapshot: snapshot);
+    });
+  }
+
+  verificarAlteracoes(QuerySnapshot<Map<String, dynamic>> snapshot) {
+    if (snapshot.docChanges.length == 1) {
+      for (var change in snapshot.docChanges) {
+        String tipoAlteracao = "";
+        Color cor = Colors.green;
+        switch (change.type) {
+          case DocumentChangeType.added:
+            tipoAlteracao = "Novo produto: ";
+            cor = Colors.green;
+            break;
+          case DocumentChangeType.modified:
+            tipoAlteracao = "Produto modificado: ";
+            cor = Colors.orange;
+            break;
+          case DocumentChangeType.removed:
+            tipoAlteracao = "Produto removido: ";
+            cor = Colors.red;
+            break;
+        }
+        Produto produto = Produto.fromMap(change.doc.data()!);
+        final snackBar = SnackBar(
+          backgroundColor: cor,
+          content: Text('$tipoAlteracao ${produto.name}'),
+        );
+
+        // Find the ScaffoldMessenger in the widget tree
+        // and use it to show a SnackBar.
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    }
+  }
+
+  removerProduto(Produto produto) async {
+    await firestore
+        .collection("ListaCompras")
+        .doc(widget.listin.id)
+        .collection("produtos")
+        .doc(produto.id)
+        .delete();
+  }
+
+  double calcularPrecoPegos() {
+    double total = 0;
+    for (var produto in listaProdutosPegos) {
+      if (produto.amount != null && produto.price != null) {
+        total += (produto.amount! * produto.price!);
+      }
+    }
+    return total;
+  }
 }
