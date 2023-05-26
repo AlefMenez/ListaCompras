@@ -3,6 +3,7 @@ import 'package:firebase_project/_core/myColor.dart';
 import 'package:firebase_project/firestore/screens/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'authentication/screens/auth_screen.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -49,7 +50,7 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      home: const HomeScreen(),
+      home: const AuthScreen(),
     );
   }
 }
