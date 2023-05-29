@@ -1,13 +1,16 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_project/authentication/component/senha_confirmation.dart';
 import 'package:firebase_project/authentication/screens/services/auth_service.dart';
 import 'package:firebase_project/firestore_produtos/presentation/produto_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/listin.dart';
+import '../services/listin_service.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final User user;
+  const HomeScreen({super.key, required this.user});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -15,6 +18,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<Listin> listListins = [];
+  ListinService listinService = ListinService();
 
   FirebaseFirestore firestore = FirebaseFirestore.instance;
   @override
@@ -29,6 +33,17 @@ class _HomeScreenState extends State<HomeScreen> {
       drawer: Drawer(
         child: ListView(
           children: [
+            UserAccountsDrawerHeader(
+              currentAccountPicture: const CircleAvatar(
+                backgroundColor: Colors.white,
+              ),
+              accountName: Text(
+                (widget.user.displayName != null)
+                    ? widget.user.displayName!
+                    : "",
+              ),
+              accountEmail: Text(widget.user.email!),
+            ),
             ListTile(
               leading: const Icon(
                 Icons.delete,
@@ -181,10 +196,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         }
 
                         //Salvar no firestore
-                        firestore
-                            .collection("ListaCompras")
-                            .doc(listin.id)
-                            .set(listin.toMap());
+                        listinService.adicionarListin(listin: listin);
 
                         refresh();
 
@@ -201,21 +213,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   refresh() async {
-    List<Listin> temp = [];
-    QuerySnapshot<Map<String, dynamic>> snapshot =
-        await firestore.collection("ListaCompras").get();
-
-    for (var doc in snapshot.docs) {
-      temp.add(Listin.fromMap(doc.data()));
-    }
-
+    List<Listin> listaListins = await listinService.lerListins();
     setState(() {
-      listListins = temp;
+      listListins = listaListins;
     });
   }
 
-  void remove(Listin model) {
-    firestore.collection('ListaCompras').doc(model.id).delete();
+  void remove(Listin model) async {
+    await listinService.removerListin(listinId: model.id);
     refresh();
   }
 }
