@@ -92,6 +92,21 @@ class _AuthScreenState extends State<AuthScreen> {
                         return null;
                       },
                     ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Visibility(
+                          visible: isEntrando,
+                          child: TextButton(
+                            onPressed: () {
+                              esqueciMinhaSenhaClicado();
+                            },
+                            child: Text('Esqueceu a senha?',
+                                textAlign: TextAlign.right),
+                          ),
+                        ),
+                      ],
+                    ),
                     Padding(
                       padding: const EdgeInsets.all(8.0),
                       child: Visibility(
@@ -180,24 +195,69 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   _entrarUsuario({required String email, required String senha}) {
-    authService.entrarUsuario(email: email, senha: senha);
+    authService.entrarUsuario(email: email, senha: senha).then((String? erro) {
+      if (erro != null) {
+        showSnackBar(context: context, mensagem: erro, isErro: true);
+      }
+    });
   }
 
   _criarUsuario(
-      {required String email,
-      required String senha,
-      required String nome}) async {
-    String? erro = await authService.cadastrarUsuario(
-        email: email, senha: senha, nome: nome);
+      {required String email, required String senha, required String nome}) {
+    authService.cadastrarUsuario(email: email, senha: senha, nome: nome).then(
+      (String? erro) {
+        if (erro != null) {
+          showSnackBar(context: context, mensagem: erro);
+        }
+      },
+    );
+  }
 
-    if (erro == null) {
-      showSnackBar(
-        context: context,
-        mensagem: 'Conta criada com sucesso',
-        isErro: false,
-      );
-    } else {
-      showSnackBar(context: context, mensagem: erro);
-    }
+  esqueciMinhaSenhaClicado() {
+    String email = _emailController.text;
+    showDialog(
+      context: context,
+      builder: (context) {
+        TextEditingController redefinicaoSenha =
+            TextEditingController(text: email);
+        return AlertDialog(
+          title: const Text("Confirme o email de redefinição de senha"),
+          content: TextFormField(
+            controller: redefinicaoSenha,
+            decoration: const InputDecoration(
+              label: Text("Confirme o email"),
+            ),
+          ),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.all(
+              Radius.circular(32),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                authService
+                    .redefinicaoSenha(
+                        email: redefinicaoSenha.text.toString().trim())
+                    .then((String? erro) {
+                  if (erro == null) {
+                    showSnackBar(
+                        context: context,
+                        mensagem: 'Email de redefinicão enviado!',
+                        isErro: false);
+                  } else {
+                    showSnackBar(
+                        context: context, mensagem: erro, isErro: true);
+                  }
+
+                  Navigator.pop(context);
+                });
+              },
+              child: const Text('redefinir senha'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

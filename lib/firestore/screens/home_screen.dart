@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_project/authentication/component/senha_confirmation.dart';
+import 'package:firebase_project/authentication/screens/services/auth_service.dart';
 import 'package:firebase_project/firestore_produtos/presentation/produto_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
@@ -24,6 +26,29 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      drawer: Drawer(
+        child: ListView(
+          children: [
+            ListTile(
+              leading: const Icon(
+                Icons.delete,
+                color: Colors.red,
+              ),
+              title: const Text('Remover conta'),
+              onTap: () {
+                showSenhaConfirmacaoDialog(context: context, email: '');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text("Sair"),
+              onTap: () {
+                AuthService().deslogar();
+              },
+            ),
+          ],
+        ),
+      ),
       appBar: AppBar(
         title: const Text("Listin - Feira Colaborativa"),
       ),
@@ -68,8 +93,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: ListTile(
                         onTap: () {
                           Navigator.push(
-                            context, MaterialPageRoute(builder: (context) => ProdutoScreen(listin: model),)
-                          );
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) =>
+                                    ProdutoScreen(listin: model),
+                              ));
                         },
                         onLongPress: () {
                           showFormModal(model: model);
