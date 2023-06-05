@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'authentication/screens/auth_screen.dart';
 import 'firebase_options.dart';
+import 'storage/storage_screen.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -68,9 +70,9 @@ class RoteadorTelas extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         } else {
           if (snapshot.hasData) {
-            return  HomeScreen(user: snapshot.data!);
+            return HomeScreen(user: snapshot.data!);
           } else {
-            return const AuthScreen();
+            return StorageScreen(); //const AuthScreen();
           }
         }
       },
