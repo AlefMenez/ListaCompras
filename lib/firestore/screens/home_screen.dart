@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_project/authentication/component/senha_confirmation.dart';
 import 'package:firebase_project/authentication/screens/services/auth_service.dart';
 import 'package:firebase_project/firestore_produtos/presentation/produto_screen.dart';
+import 'package:firebase_project/storage/storage_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/listin.dart';
@@ -34,8 +35,8 @@ class _HomeScreenState extends State<HomeScreen> {
         child: ListView(
           children: [
             UserAccountsDrawerHeader(
-              currentAccountPicture: const CircleAvatar(
-                backgroundColor: Colors.white,
+              currentAccountPicture: CircleAvatar(
+                backgroundImage: (widget.user.photoURL != null) ? NetworkImage(widget.user.photoURL!) : null,
               ),
               accountName: Text(
                 (widget.user.displayName != null)
@@ -43,6 +44,17 @@ class _HomeScreenState extends State<HomeScreen> {
                     : "",
               ),
               accountEmail: Text(widget.user.email!),
+            ),
+            ListTile(
+              leading: const Icon(Icons.image, color: Colors.blue,),
+              title: const Text("mudar foto de perfil"),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const StorageScreen(),
+                    ));
+              },
             ),
             ListTile(
               leading: const Icon(

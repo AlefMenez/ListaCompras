@@ -1,8 +1,11 @@
 import 'dart:io';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_project/authentication/component/show_snackbar.dart';
+import 'package:firebase_project/storage/models/image_custom_info.dart';
 import 'package:firebase_project/storage/services/storage_service.dart';
 import 'package:firebase_project/storage/widgets/source_modal_widget.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_project/storage/widgets/source_modal_widget.dart';
@@ -17,9 +20,16 @@ class StorageScreen extends StatefulWidget {
 class _StorageScreenState extends State<StorageScreen> {
   String? urlPhoto;
 
-  List<String> listFiles = [];
+  List<ImageCustomInfo> listFiles = [];
 
   final StorageService _storageService = StorageService();
+  final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+
+  @override
+  void initState() {
+    reload();
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,11 +82,40 @@ class _StorageScreenState extends State<StorageScreen> {
             "Histórico de Imagens",
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
           ),
-          Column(
-            children: List.generate(listFiles.length, (index) {
-              String url = listFiles[index];
-              return Image.network(url);
-            }),
+          const SizedBox(height: 16),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                children: List.generate(listFiles.length, (index) {
+                  ImageCustomInfo imageInfo = listFiles[index];
+                  return ListTile(
+                    onTap: () {
+                      selectImage(imageInfo);
+                    },
+                    leading: ClipRRect(
+                      borderRadius: BorderRadius.circular(24),
+                      child: Image.network(
+                        imageInfo.urlDownload,
+                        height: 48,
+                        width: 48,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    title: Text(imageInfo.name),
+                    subtitle: Text(imageInfo.size),
+                    trailing: IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                      ),
+                      onPressed: () {
+                        deleteImage(imageInfo);
+                      },
+                    ),
+                  );
+                }),
+              ),
+            ),
           )
         ]),
       ),
@@ -104,10 +143,12 @@ class _StorageScreenState extends State<StorageScreen> {
             .then((XFile? image) {
           if (image != null) {
             _storageService
-                .upload(file: File(image.path), fileName: "user_photo")
+                .upload(
+                    file: File(image.path), fileName: DateTime.now().toString())
                 .then((String urlDownload) {
               setState(() {
                 urlPhoto = urlDownload;
+                reload();
               });
             });
           } else {
@@ -120,12 +161,30 @@ class _StorageScreenState extends State<StorageScreen> {
   }
 
   reload() {
-    _storageService
-        .getDownloadByFileName(fileName: "user_photo")
-        .then((urlDownload) {
+    setState(() {
+      urlPhoto = _firebaseAuth.currentUser!.photoURL;
+    });
+
+    _storageService.listAllFiles().then((List<ImageCustomInfo> listFilesInfo) {
       setState(() {
-        urlPhoto = urlDownload;
+        listFiles = listFilesInfo;
       });
+    });
+  }
+
+  selectImage(ImageCustomInfo imageInfo) {
+    _firebaseAuth.currentUser!.updatePhotoURL(imageInfo.urlDownload);
+    setState(() {
+      urlPhoto = imageInfo.urlDownload;
+    });
+  }
+
+  deleteImage(ImageCustomInfo imageInfo) {
+    _storageService.deleteByReference(imageInfo: imageInfo).then((value) {
+      if (urlPhoto == imageInfo.urlDownload) {
+        urlPhoto = null;
+      }
+      reload();
     });
   }
 }
